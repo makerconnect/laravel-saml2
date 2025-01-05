@@ -2,6 +2,7 @@
 
 namespace Aacotroneo\Saml2;
 
+use App\Saml2Configuration;
 use OneLogin\Saml2\Auth as OneLogin_Saml2_Auth;
 use OneLogin\Saml2\Error as OneLogin_Saml2_Error;
 use Aacotroneo\Saml2\Events\Saml2LogoutEvent;
@@ -34,7 +35,7 @@ class Saml2Auth
      * @throws \InvalidArgumentException if $idpName is empty
      * @throws \Exception if key or certificate is configured to a file path and the file is not found.
      */
-    public static function loadOneLoginAuthFromIpdConfig($idpName)
+    /*public static function loadOneLoginAuthFromIpdConfig($idpName)
     {
         if (empty($idpName)) {
             throw new \InvalidArgumentException("IDP name required.");
@@ -42,10 +43,10 @@ class Saml2Auth
 
         $config = config('saml2.'.$idpName.'_idp_settings');
 
-        if (is_null($config)) {
-            throw new \InvalidArgumentException('"' . $idpName . '" is not a valid IdP.');
-        }
-
+/*        if(empty($config)) {
+            die("Invalid IDP name.");
+        }*/
+/*
         if (empty($config['sp']['entityId'])) {
             $config['sp']['entityId'] = URL::route('saml2_metadata', $idpName);
         }
@@ -64,6 +65,36 @@ class Saml2Auth
         }
         if (strpos($config['idp']['x509cert'], 'file://')===0) {
             $config['idp']['x509cert'] = static::extractCertFromFile($config['idp']['x509cert']);
+        }
+
+        return new OneLogin_Saml2_Auth($config);
+    }*/
+
+    public static function loadOneLoginAuthFromIpdConfig($idpName)
+    {
+        if (empty($idpName)) {
+            throw new \InvalidArgumentException("IDP name required.");
+        }
+
+        $saml2Config = Saml2Configuration::where('idp_name', $idpName)->first();
+
+        // retrieve the shared config valid for all organziations
+        $config = (new Saml2Configuration)->getDefaultConfig();
+        // apply idp_name-specific variables
+        $config['idp']['entityId'] = $saml2Config['entity_id'];
+        $config['idp']['singleSignOnService']['url'] = $saml2Config['sso_url'];
+        $config['idp']['singleLogoutService']['url'] = $saml2Config['sso_url'];
+        $config['idp']['x509cert'] = $saml2Config['cert'];
+
+        if (empty($config['sp']['entityId'])) {
+            $config['sp']['entityId'] = URL::route('saml2_metadata', $idpName);
+        }
+        if (empty($config['sp']['assertionConsumerService']['url'])) {
+            $config['sp']['assertionConsumerService']['url'] = URL::route('saml2_acs', $idpName);
+        }
+        if (!empty($config['sp']['singleLogoutService']) &&
+            empty($config['sp']['singleLogoutService']['url'])) {
+            $config['sp']['singleLogoutService']['url'] = URL::route('saml2_sls', $idpName);
         }
 
         return new OneLogin_Saml2_Auth($config);
