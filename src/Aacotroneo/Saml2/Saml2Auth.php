@@ -80,11 +80,12 @@ class Saml2Auth
 
         // retrieve the shared config valid for all organziations
         $config = (new Saml2Configuration)->getDefaultConfig();
+        $cert = (new Saml2Configuration)->decrypt($saml2Config['cert']);
         // apply idp_name-specific variables
         $config['idp']['entityId'] = $saml2Config['entity_id'];
         $config['idp']['singleSignOnService']['url'] = $saml2Config['sso_url'];
         $config['idp']['singleLogoutService']['url'] = $saml2Config['sso_url'];
-        $config['idp']['x509cert'] = $saml2Config['cert'];
+        $config['idp']['x509cert'] = $cert;
 
         if (empty($config['sp']['entityId'])) {
             $config['sp']['entityId'] = URL::route('saml2_metadata', $idpName);
